@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  ml-pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: unsw-nb15-ml-pipeline:latest
+    container_name: unsw-nb15-training
+
+    # GPU support (requires nvidia-docker)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+    # Volume mounts
+    volumes:
+      # Training data (read-only)
+      - ./training_and_test_sets:/app/training_and_test_sets:ro
+      # Output directories
+      - ./data:/app/data
+      - ./models:/app/models
+
+    # Environment variables
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=all
+      - TZ=UTC
+
+    # Automatically remove container after completion
+    # Comment this out if you want to inspect logs after run
+    # rm: true

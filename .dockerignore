@@ -1,0 +1,40 @@
+# Exclude from Docker build context to reduce image size
+
+# Output directories
+data/
+models/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation (not needed in image)
+README.md
+README_DOCKER.md
+
+# Docker files (already used during build)
+Dockerfile
+docker-compose.yml
+.dockerignore
