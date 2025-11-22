@@ -24,12 +24,22 @@ services:
       # Output directories
       - ./data:/app/data
       - ./models:/app/models
+      # WandB cache (persist between runs)
+      - ./wandb:/app/wandb
+
+    # Load environment variables from .env file
+    env_file:
+      - .env
 
     # Environment variables
     environment:
       - CUDA_VISIBLE_DEVICES=0
       - NVIDIA_VISIBLE_DEVICES=all
       - TZ=UTC
+      # WandB-specific settings
+      - WANDB_DIR=/app/wandb
+      - WANDB_CACHE_DIR=/app/wandb/.cache
+      - WANDB_CONFIG_DIR=/app/wandb/.config
 
     # Automatically remove container after completion
     # Comment this out if you want to inspect logs after run
