@@ -31,12 +31,11 @@ try:
     # Define input type
     initial_type = [('float_input', FloatTensorType([None, n_features]))]
     
-    # Convert to ONNX (with explicit op_version)
+    # Convert to ONNX
     iforest_onnx = to_onnx(
         iforest_model,
         initial_types=initial_type,
-        target_opset={'ai.onnx.ml': 3, 'ai.onnx': 15},
-        options={'zipmap': False}  # Disable ZipMap for cleaner output
+        target_opset={'ai.onnx.ml': 3, 'ai.onnx': 15}
     )
     
     # Save ONNX model
@@ -75,7 +74,7 @@ try:
     xgb_onnx = convert_xgboost(
         xgb_model,
         initial_types=initial_type,
-        target_opset={'': 15, 'ai.onnx.ml': 2}
+        target_opset=15  # Integer for convert_xgboost() with Booster models
     )
     
     # Save ONNX model
