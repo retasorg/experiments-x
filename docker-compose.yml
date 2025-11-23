@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile
     image: unsw-nb15-ml-pipeline:latest
-    container_name: unsw-nb15-training
+    container_name: agung-unsw-nb15-training
 
     # GPU support (requires nvidia-docker)
     deploy:
