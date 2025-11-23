@@ -35,7 +35,7 @@ try:
     iforest_onnx = to_onnx(
         iforest_model,
         initial_types=initial_type,
-        target_opset={'ai.onnx.ml': 3, 'ai.onnx': 15}
+        target_opset={"": 15, "ai.onnx.ml": 2}  # Main domain: "" (not "ai.onnx"), ML opset: 2
     )
     
     # Save ONNX model
