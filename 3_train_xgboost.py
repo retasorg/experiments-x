@@ -50,31 +50,39 @@ print(f"✓ Training samples: {len(X_train)}")
 print(f"✓ Test samples: {len(X_test)}")
 print(f"✓ Features: {X_train.shape[1]}")
 
-# Train XGBoost
-print("\n2. Training XGBoost Classifier...")
+# Convert to DMatrix for native XGBoost API
+print("\n2. Preparing data for XGBoost...")
+dtrain = xgb.DMatrix(X_train, label=y_train)
+dtest = xgb.DMatrix(X_test, label=y_test)
+print("✓ Data converted to DMatrix format")
+
+# Train XGBoost using native API (supports callbacks)
+print("\n3. Training XGBoost Classifier...")
 print("Configuration:")
-print("  - n_estimators: 100")
+print("  - num_boost_round: 100")
 print("  - max_depth: 6")
-print("  - learning_rate: 0.3")
+print("  - eta (learning_rate): 0.3")
 print("  - objective: binary:logistic")
 
 start_time = time.time()
 
-model = xgb.XGBClassifier(
-    n_estimators=100,
-    max_depth=6,
-    learning_rate=0.3,
-    objective='binary:logistic',
-    random_state=42,
-    n_jobs=-1,  # Use all CPU cores
-    eval_metric='logloss'
-)
+# XGBoost parameters (native format)
+params = {
+    'max_depth': 6,
+    'eta': 0.3,  # learning_rate
+    'objective': 'binary:logistic',
+    'eval_metric': 'logloss',
+    'seed': 42,
+    'nthread': -1  # Use all CPU cores
+}
 
-model.fit(
-    X_train,
-    y_train,
-    eval_set=[(X_test, y_test)],
-    verbose=True,
+# Train with WandB callback support
+model = xgb.train(
+    params=params,
+    dtrain=dtrain,
+    num_boost_round=100,
+    evals=[(dtrain, 'train'), (dtest, 'test')],
+    verbose_eval=True,
     callbacks=[WandbCallback(
         log_model=True,
         log_feature_importance=True,
@@ -86,9 +94,9 @@ training_time = time.time() - start_time
 print(f"\n✓ Training completed in {training_time:.2f} seconds")
 
 # Evaluate on test set
-print("\n3. Evaluating model...")
-y_pred = model.predict(X_test)
-y_pred_proba = model.predict_proba(X_test)
+print("\n4. Evaluating model...")
+y_pred_proba = model.predict(dtest)
+y_pred = (y_pred_proba > 0.5).astype(int)  # Convert probabilities to binary predictions
 
 # Calculate metrics
 accuracy = accuracy_score(y_test, y_pred)
@@ -135,19 +143,26 @@ wandb.log({"confusion_matrix": wandb.Image(fig)})
 plt.close()
 
 # Feature importance
-print("\n4. Feature importance (top 10)...")
-feature_importance = model.feature_importances_
+print("\n5. Feature importance (top 10)...")
+importance_dict = model.get_score(importance_type='weight')
+# Convert to array format (feature index -> importance)
+feature_importance = np.zeros(X_train.shape[1])
+for feat, score in importance_dict.items():
+    feat_idx = int(feat.replace('f', ''))
+    feature_importance[feat_idx] = score
+
 top_features = np.argsort(feature_importance)[-10:][::-1]
 for i, idx in enumerate(top_features, 1):
     print(f"  {i}. Feature {idx}: {feature_importance[idx]:.4f}")
 
 # Save model
-print("\n5. Saving model...")
+print("\n6. Saving model...")
+# Save as pickle (for sklearn compatibility)
 with open('./models/xgboost_classifier.pkl', 'wb') as f:
     pickle.dump(model, f)
 print("✓ Model saved to ./models/xgboost_classifier.pkl")
 
-# Also save in native XGBoost format for better compatibility
+# Save in native XGBoost JSON format (preferred for deployment)
 model.save_model('./models/xgboost_classifier.json')
 print("✓ Model saved to ./models/xgboost_classifier.json")
 
