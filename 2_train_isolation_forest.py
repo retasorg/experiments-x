@@ -29,7 +29,7 @@ run = wandb.init(
     config={
         "model_type": "IsolationForest",
         "n_estimators": 100,
-        "contamination": 0.0,
+        "contamination": "auto",
         "max_samples": "auto",
         "random_state": 42
     }
@@ -49,14 +49,14 @@ print(f"✓ Test samples: {len(X_test)}")
 print("\n2. Training Isolation Forest...")
 print("Configuration:")
 print("  - n_estimators: 100")
-print("  - contamination: 0.0 (training on 100% normal data)")
+print("  - contamination: auto (novelty detection with clean training data)")
 print("  - max_samples: auto")
 
 start_time = time.time()
 
 model = IsolationForest(
     n_estimators=100,
-    contamination=0.0,  # Training data has 0% anomalies (novelty detection)
+    contamination='auto',  # 'auto' for novelty detection (training on clean data)
     max_samples='auto',
     random_state=42,
     n_jobs=-1,  # Use all CPU cores
