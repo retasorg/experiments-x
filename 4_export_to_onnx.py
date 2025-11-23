@@ -10,7 +10,7 @@ from skl2onnx.common.data_types import FloatTensorType
 import onnxruntime as rt
 import xgboost as xgb
 from onnxmltools.convert import convert_xgboost
-from onnxconverter_common import FloatTensorType as FloatTensorType2
+from onnxmltools.convert.common.data_types import FloatTensorType as FloatTensorTypeXGB
 
 print("=" * 50)
 print("ONNX Model Export")
@@ -31,11 +31,12 @@ try:
     # Define input type
     initial_type = [('float_input', FloatTensorType([None, n_features]))]
     
-    # Convert to ONNX
+    # Convert to ONNX (with explicit op_version)
     iforest_onnx = to_onnx(
         iforest_model,
         initial_types=initial_type,
-        target_opset={'ai.onnx.ml': 3, 'ai.onnx': 15}
+        target_opset={'ai.onnx.ml': 3, 'ai.onnx': 15},
+        options={'zipmap': False}  # Disable ZipMap for cleaner output
     )
     
     # Save ONNX model
@@ -64,13 +65,13 @@ except Exception as e:
 # Export XGBoost
 print("\n3. Exporting XGBoost to ONNX...")
 try:
-    # Load XGBoost model
-    xgb_model = xgb.XGBClassifier()
+    # Load XGBoost model as Booster (native API)
+    xgb_model = xgb.Booster()
     xgb_model.load_model('./models/xgboost_classifier.json')
-    
+
     # Convert to ONNX using onnxmltools
-    initial_type = [('float_input', FloatTensorType2([None, n_features]))]
-    
+    initial_type = [('float_input', FloatTensorTypeXGB([None, n_features]))]
+
     xgb_onnx = convert_xgboost(
         xgb_model,
         initial_types=initial_type,
@@ -86,17 +87,20 @@ try:
     # Verify ONNX model
     session = rt.InferenceSession('./models/xgboost_classifier.onnx')
     test_sample = X_test[:5].astype(np.float32)
-    
+
     input_name = session.get_inputs()[0].name
     label_name = session.get_outputs()[0].name
     proba_name = session.get_outputs()[1].name
-    
+
     onnx_result = session.run([label_name, proba_name], {input_name: test_sample})
     onnx_pred = onnx_result[0]
     onnx_proba = onnx_result[1]
-    
-    xgb_pred = xgb_model.predict(test_sample)
-    
+
+    # Booster.predict() returns probabilities, convert to labels
+    dtest = xgb.DMatrix(test_sample)
+    xgb_proba = xgb_model.predict(dtest)
+    xgb_pred = (xgb_proba > 0.5).astype(int)
+
     match = np.array_equal(onnx_pred.flatten(), xgb_pred)
     print(f"✓ Verification: {'PASSED' if match else 'WARNING - minor differences expected'}")
     
